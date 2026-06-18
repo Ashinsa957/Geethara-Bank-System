@@ -1,0 +1,1293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GEETHARA Enterprises - Smart Finance</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f1f5f9; transition: background-color 0.3s, color 0.3s; }
+        .tab-content { display: none; animation: fadeIn 0.4s ease-in-out; }
+        .tab-content.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .glass { background: #ffffff; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05); border: 1px solid #e2e8f0; border-radius: 1.25rem; }
+        
+        .dark-mode { background: #0f172a; color: #f8fafc; }
+        .dark-mode .glass { background: #1e293b; border-color: #334155; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.5); }
+        .dark-mode input, .dark-mode select, .dark-mode textarea { background: #0f172a; color: #ffffff; border-color: #475569; }
+        .dark-mode th { background: #0f172a !important; color: #cbd5e1 !important; }
+        .dark-mode td { border-color: #334155 !important; color: #e2e8f0; }
+        .dark-mode label { color: #94a3b8; }
+        
+        .gradient-main { background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 50%, #3b82f6 100%); }
+        
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 4px; }
+        .dark-mode ::-webkit-scrollbar-thumb { background: #475569; }
+
+        #loginScreen { position: fixed; inset: 0; background: #0f172a; z-index: 100; display: flex; justify-content: center; align-items: center; }
+        
+        .audit-tooltip { position: relative; display: inline-block; }
+        .audit-tooltip .tooltiptext { visibility: hidden; width: max-content; background-color: #333; color: #fff; text-align: center; border-radius: 6px; padding: 5px 10px; position: absolute; z-index: 1; bottom: 125%; left: 50%; transform: translateX(-50%); opacity: 0; transition: opacity 0.3s; font-size: 0.75rem;}
+        .audit-tooltip:hover .tooltiptext { visibility: visible; opacity: 1; }
+        
+        .btn-disabled { opacity: 0.4; cursor: not-allowed; }
+    </style>
+</head>
+<body class="text-gray-900 antialiased">
+
+    <div id="loginScreen">
+        <div class="bg-white p-8 rounded-2xl shadow-2xl w-96 text-center transform transition-all">
+            <i class="fa-brands fa-google text-5xl text-blue-600 mb-4"></i>
+            <h2 class="text-2xl font-bold mb-2 text-gray-900">System Login</h2>
+            <p class="text-sm text-gray-600 mb-6">Authorized Access Only</p>
+            <button onclick="signInWithGoogle()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-lg shadow-lg hover:bg-blue-700 transition flex items-center justify-center">
+                <i class="fa-solid fa-right-to-bracket mr-2"></i> Sign in with Google
+            </button>
+        </div>
+    </div>
+
+    <nav class="gradient-main text-white shadow-lg p-4 flex justify-between items-center sticky top-0 z-40">
+        <div class="flex items-center space-x-3">
+            <i class="fa-solid fa-chart-line text-2xl bg-white text-blue-600 p-2 rounded-lg shadow-md"></i>
+            <h1 class="text-xl md:text-2xl font-extrabold tracking-tight">GEETHARA Enterprises <span class="text-sm font-light opacity-90 hidden md:inline">| Smart Finance OS</span></h1>
+        </div>
+        <div class="flex items-center space-x-4">
+            <div class="flex items-center space-x-1 border-r border-white/20 pr-3">
+                <button id="btnUndo" onclick="undo()" class="hover:bg-white/20 p-2 rounded-full transition btn-disabled" title="Undo"><i class="fa-solid fa-rotate-left"></i></button>
+                <button id="btnRedo" onclick="redo()" class="hover:bg-white/20 p-2 rounded-full transition btn-disabled" title="Redo"><i class="fa-solid fa-rotate-right"></i></button>
+            </div>
+            <button onclick="logout()" class="hover:bg-white/20 p-2 rounded-full transition" title="Logout"><i class="fa-solid fa-power-off text-lg text-red-400"></i></button>
+            <button onclick="toggleDarkMode()" class="hover:bg-white/20 p-2 rounded-full transition" title="Toggle Theme"><i class="fa-solid fa-moon text-lg" id="themeIcon"></i></button>
+            <button onclick="openTab('settings')" class="hover:bg-white/20 p-2 rounded-full transition" title="Settings"><i class="fa-solid fa-gear text-lg"></i></button>
+            <div class="font-semibold bg-black/20 px-4 py-1.5 rounded-full text-sm shadow-inner backdrop-blur-sm" id="currentDate"></div>
+        </div>
+    </nav>
+
+    <div class="flex h-[calc(100vh-76px)] overflow-hidden">
+        <aside class="w-20 md:w-64 bg-white dark:bg-gray-900 border-r dark:border-gray-800 flex flex-col shadow-sm transition-all duration-300">
+            <nav class="flex-1 px-3 py-6 space-y-2">
+                <button onclick="openTab('dashboard')" class="w-full flex items-center justify-center md:justify-start p-3 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 font-bold transition tab-btn" data-tab="dashboard">
+                    <i class="fa-solid fa-chart-pie md:mr-3 text-blue-500 text-xl"></i> <span class="hidden md:block">Dashboard</span>
+                </button>
+                <button onclick="openTab('accounts')" class="w-full flex items-center justify-center md:justify-start p-3 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 font-bold transition tab-btn" data-tab="accounts">
+                    <i class="fa-solid fa-building-columns md:mr-3 text-purple-500 text-xl"></i> <span class="hidden md:block">Bank Accounts</span>
+                </button>
+                <button onclick="openTab('transactions')" class="w-full flex items-center justify-center md:justify-start p-3 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 font-bold transition tab-btn" data-tab="transactions">
+                    <i class="fa-solid fa-money-bill-transfer md:mr-3 text-green-500 text-xl"></i> <span class="hidden md:block">Transactions</span>
+                </button>
+                <button onclick="openTab('masterData')" class="w-full flex items-center justify-center md:justify-start p-3 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 font-bold transition tab-btn" data-tab="masterData">
+                    <i class="fa-solid fa-database md:mr-3 text-yellow-500 text-xl"></i> <span class="hidden md:block">Master Data</span>
+                </button>
+                <button onclick="openTab('odInterest')" class="w-full flex items-center justify-center md:justify-start p-3 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 font-bold transition tab-btn" data-tab="odInterest">
+                    <i class="fa-solid fa-percent md:mr-3 text-red-500 text-xl"></i> <span class="hidden md:block">OD Interest</span>
+                </button>
+            </nav>
+        </aside>
+
+        <main class="flex-1 overflow-x-hidden overflow-y-auto p-4 md:p-8 relative" id="mainArea">
+            
+            <div id="dashboard" class="tab-content active max-w-7xl mx-auto">
+                <div class="flex justify-between items-end mb-6">
+                    <h2 class="text-2xl font-bold flex items-center"><i class="fa-solid fa-bolt text-yellow-500 mr-2"></i> Financial Overview</h2>
+                    <div class="text-sm font-semibold bg-blue-100 text-blue-800 px-3 py-1 rounded-full dark:bg-blue-900 dark:text-blue-200" id="budgetHealth">Health: Calculating...</div>
+                </div>
+                
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                    <div class="glass p-5 border-l-4 border-green-500">
+                        <p class="text-xs text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider">Today's Income</p>
+                        <h4 class="text-2xl font-black text-green-600 mt-1" id="dashTodayInc">Rs. 0.00</h4>
+                    </div>
+                    <div class="glass p-5 border-l-4 border-red-500">
+                        <p class="text-xs text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider">Today's Expense</p>
+                        <h4 class="text-2xl font-black text-red-600 mt-1" id="dashTodayExp">Rs. 0.00</h4>
+                    </div>
+                    <div class="glass p-5 border-l-4 border-orange-500">
+                        <p class="text-xs text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider">Pending Cheques Val.</p>
+                        <h4 class="text-2xl font-black text-orange-500 mt-1" id="dashPendingVal">Rs. 0.00</h4>
+                    </div>
+                    <div class="glass p-5 border-l-4 border-blue-500 bg-blue-50 dark:bg-blue-900/10">
+                        <p class="text-xs text-blue-600 dark:text-blue-400 font-bold uppercase tracking-wider">Total Realized Balance</p>
+                        <h4 class="text-2xl font-black text-blue-700 dark:text-blue-400 mt-1" id="dashTotalBalance">Rs. 0.00</h4>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                    <div class="glass p-6 border-t-4 border-green-500">
+                        <p class="text-sm text-gray-500 dark:text-gray-400 font-bold mb-1 uppercase">This Month's Income</p>
+                        <h3 class="text-4xl font-black text-green-600 tracking-tight" id="dashIncome">Rs. 0.00</h3>
+                    </div>
+                    <div class="glass p-6 border-t-4 border-red-500">
+                        <p class="text-sm text-gray-500 dark:text-gray-400 font-bold mb-1 uppercase">This Month's Expense</p>
+                        <h3 class="text-4xl font-black text-red-600 tracking-tight" id="dashExpense">Rs. 0.00</h3>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div class="glass p-6 lg:col-span-2">
+                        <h3 class="font-bold mb-4 text-gray-800 dark:text-gray-200">Income vs Expense (6 Months)</h3>
+                        <div class="relative w-full h-64"><canvas id="financeChart"></canvas></div>
+                    </div>
+                    <div class="glass p-6">
+                        <h3 class="font-bold mb-4 text-gray-800 dark:text-gray-200">Expense Breakdown</h3>
+                        <div class="relative w-full h-64"><canvas id="pieChart"></canvas></div>
+                    </div>
+                </div>
+
+                <div class="glass p-6 mt-8">
+                    <h3 class="font-bold mb-4 flex items-center"><i class="fa-solid fa-clock text-orange-500 mr-2"></i> Pending Cheques Tracker</h3>
+                    <div class="overflow-auto max-h-64 rounded-lg border border-gray-100 dark:border-gray-800">
+                        <table class="w-full text-sm text-left">
+                            <thead class="bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">
+                                <tr><th class="py-3 px-4">Bank Date</th><th class="py-3 px-4">Realize Date</th><th class="py-3 px-4">Cheque No</th><th class="py-3 px-4 text-right">Amount</th></tr>
+                            </thead>
+                            <tbody id="pendingChequesBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div id="accounts" class="tab-content max-w-7xl mx-auto">
+                <div class="flex flex-col lg:flex-row gap-8">
+                    <div class="lg:w-1/3 space-y-6">
+                        <div class="glass p-6">
+                            <h2 class="text-xl font-bold mb-4 flex items-center"><i class="fa-solid fa-plus-circle text-purple-600 mr-2"></i> Add New Account</h2>
+                            <form id="accountForm" onsubmit="saveAccount(event)">
+                                <div class="space-y-4">
+                                    <div><label class="block text-sm font-bold mb-1">Bank Name</label><input type="text" id="accBankName" required class="w-full border border-gray-300 dark:border-gray-600 p-2.5 rounded-lg focus:ring-2 focus:ring-purple-500 bg-gray-50 dark:bg-gray-800"></div>
+                                    <div><label class="block text-sm font-bold mb-1">Account Number</label><input type="text" id="accNumber" required class="w-full border border-gray-300 dark:border-gray-600 p-2.5 rounded-lg focus:ring-2 focus:ring-purple-500 bg-gray-50 dark:bg-gray-800"></div>
+                                    <div><label class="block text-sm font-bold mb-1">Opening Date</label><input type="date" id="accDate" required class="w-full border border-gray-300 dark:border-gray-600 p-2.5 rounded-lg focus:ring-2 focus:ring-purple-500 bg-gray-50 dark:bg-gray-800"></div>
+                                    <div><label class="block text-sm font-bold mb-1">Opening Balance (Rs.)</label><input type="number" id="accBalance" required step="0.01" class="w-full border border-gray-300 dark:border-gray-600 p-2.5 rounded-lg focus:ring-2 focus:ring-purple-500 bg-gray-50 dark:bg-gray-800"></div>
+                                    <button type="submit" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 rounded-lg shadow transition mt-2">Save Account</button>
+                                </div>
+                            </form>
+                        </div>
+                        
+                        <div class="glass p-6 bg-blue-50 dark:bg-gray-800 border-blue-200 dark:border-gray-700">
+                            <h3 class="font-bold text-blue-800 dark:text-blue-300 mb-3"><i class="fa-solid fa-calendar-check mr-2"></i> Balance by Date</h3>
+                            <p class="text-xs text-gray-600 dark:text-gray-400 mb-3">Check the realized balance of an account up to a specific date.</p>
+                            <div class="space-y-3">
+                                <div><label class="block text-xs font-bold mb-1">Select Date</label><input type="date" id="histDate" class="w-full border border-gray-300 dark:border-gray-600 p-2 rounded-lg bg-white dark:bg-gray-700"></div>
+                                <div><label class="block text-xs font-bold mb-1">Select Account</label><select id="histAcc" class="w-full border border-gray-300 dark:border-gray-600 p-2 rounded-lg bg-white dark:bg-gray-700 dynamic-acc-list"></select></div>
+                                <button onclick="checkHistoricalBalance()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded-lg shadow transition">Calculate Balance</button>
+                                <div id="histResult" class="text-center pt-2 hidden">
+                                    <span class="text-xs font-bold text-gray-500 uppercase">Realized Balance:</span>
+                                    <h4 class="text-xl font-black text-blue-700 dark:text-blue-400" id="histBalanceVal">Rs. 0.00</h4>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="lg:w-2/3">
+                        <div class="glass overflow-hidden">
+                            <div class="bg-gray-100 dark:bg-gray-800 p-5 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                                <h3 class="text-lg font-bold text-gray-800 dark:text-white">Existing Accounts</h3>
+                                <span class="text-xs text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/30 px-3 py-1.5 rounded-full font-bold shadow-sm">Click row to view history</span>
+                            </div>
+                            <div class="overflow-x-auto p-2">
+                                <table class="w-full whitespace-no-wrap table-auto" id="accountTable">
+                                    <thead>
+                                        <tr class="text-gray-500 dark:text-gray-400 uppercase text-xs font-bold border-b dark:border-gray-700">
+                                            <th class="py-4 px-4 text-left">Bank</th><th class="py-4 px-4 text-left">Account No</th><th class="py-4 px-4 text-right" title="Balance includes only cleared amounts">Realized Balance (Rs.)</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="text-sm" id="accountListBody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="transactions" class="tab-content max-w-5xl mx-auto">
+                <div class="glass p-6 md:p-8 relative">
+                    <div class="flex justify-between items-start mb-6">
+                        <div>
+                            <h2 class="text-2xl font-bold flex items-center" id="txFormTitle">New Transaction</h2>
+                            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Record a new income or expense.</p>
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="document.getElementById('smartExcelUploadFile').click()" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg shadow transition text-sm flex items-center"><i class="fa-solid fa-file-excel mr-2"></i> Advanced Excel Import</button>
+                            <input type="file" id="smartExcelUploadFile" accept=".xlsx, .xls" class="hidden" onchange="handleSmartExcelImport(event)">
+                        </div>
+                    </div>
+                    <div id="editBadge" class="hidden absolute top-4 right-4 bg-yellow-400 text-yellow-900 px-3 py-1 rounded-full text-xs font-bold animate-pulse shadow-md"><i class="fa-solid fa-pen"></i> Editing Mode</div>
+                    
+                    <form id="txForm" onsubmit="previewTx(event)">
+                        <input type="hidden" id="txEditId" value="">
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6 pb-6 border-b border-gray-200 dark:border-gray-700">
+                            <div>
+                                <label class="block text-sm font-bold mb-2 text-gray-700 dark:text-gray-300">Transaction Type</label>
+                                <div class="flex space-x-4 bg-gray-50 dark:bg-gray-800 p-2 rounded-lg border border-gray-200 dark:border-gray-700">
+                                    <label class="flex items-center cursor-pointer flex-1 justify-center"><input type="radio" name="txCategory" value="Income" checked onchange="toggleTxForm()" class="mr-2 text-green-600 focus:ring-green-500 w-4 h-4"><span class="font-bold text-green-600">Income</span></label>
+                                    <label class="flex items-center cursor-pointer flex-1 justify-center"><input type="radio" name="txCategory" value="Expense" onchange="toggleTxForm()" class="mr-2 text-red-600 focus:ring-red-500 w-4 h-4"><span class="font-bold text-red-600">Expense</span></label>
+                                </div>
+                            </div>
+                            <div><label class="block text-sm font-bold mb-2">Bank Account</label><select id="txAccount" required class="w-full border border-gray-300 dark:border-gray-600 p-2.5 rounded-lg bg-white dark:bg-gray-800 dynamic-acc-list focus:ring-2 focus:ring-blue-500"></select></div>
+                            <div><label class="block text-sm font-bold mb-2">Transaction Date</label><input type="date" id="txDate" required class="w-full border border-gray-300 dark:border-gray-600 p-2.5 rounded-lg bg-white dark:bg-gray-800 focus:ring-2 focus:ring-blue-500"></div>
+                        </div>
+
+                        <div id="incomeArea" class="space-y-6">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label class="block text-sm font-bold mb-2">Payment Method</label>
+                                    <select id="incType" class="w-full border border-gray-300 dark:border-gray-600 p-2.5 rounded-lg bg-white dark:bg-gray-800 focus:ring-2 focus:ring-green-500" onchange="toggleIncomeType()">
+                                        <option value="Cash">Cash / Transfer</option><option value="Cheque">Cheque</option>
+                                    </select>
+                                </div>
+                                <div><label class="block text-sm font-bold mb-2">Amount (Rs.)</label><input type="number" id="incAmount" step="0.01" class="w-full border-2 border-green-300 dark:border-green-600 p-2.5 rounded-lg bg-green-50 dark:bg-gray-800/50 font-bold text-lg text-green-700 dark:text-green-400 focus:ring-2 focus:ring-green-500"></div>
+                            </div>
+                            
+                            <div id="incCashDetails" class="grid grid-cols-1 md:grid-cols-2 gap-6 bg-gray-50 dark:bg-gray-800/50 p-5 rounded-xl border border-gray-200 dark:border-gray-700">
+                                <div><label class="block text-sm font-bold mb-1">Description / Source</label><input type="text" id="incMethod" class="w-full border border-gray-300 dark:border-gray-600 p-2.5 rounded-lg bg-white dark:bg-gray-800" placeholder="e.g. Sales Revenue"></div>
+                                <div><label class="block text-sm font-bold mb-1">Extended Notes</label><input type="text" id="incNotes1" class="w-full border border-gray-300 dark:border-gray-600 p-2.5 rounded-lg bg-white dark:bg-gray-800" placeholder="Optional notes"></div>
+                            </div>
+
+                            <div id="incChequeDetails" class="hidden grid-cols-1 md:grid-cols-5 gap-4 bg-orange-50 dark:bg-gray-800/80 p-5 rounded-xl border border-orange-200 dark:border-gray-700">
+                                <div class="md:col-span-2"><label class="block text-xs font-bold mb-1">Cheque Issuer (Shop Name)</label><input type="text" id="incChqMethod" class="w-full border border-gray-300 dark:border-gray-600 p-2 rounded-lg bg-white dark:bg-gray-800"></div>
+                                <div><label class="block text-xs font-bold mb-1">Route (Street)</label><input type="text" id="incRoute" class="w-full border border-gray-300 dark:border-gray-600 p-2 rounded-lg bg-white dark:bg-gray-800" placeholder="e.g. Main St"></div>
+                                <div class="md:col-span-2"><label class="block text-xs font-bold mb-1">Cheque Number</label><input type="text" id="incChqNo" class="w-full border border-gray-300 dark:border-gray-600 p-2 rounded-lg bg-white dark:bg-gray-800"></div>
+                                <div class="md:col-span-2"><label class="block text-xs font-bold mb-1 text-blue-700 dark:text-blue-400">Realize Date (On Cheque)</label><input type="date" id="incSumDate" class="w-full border border-blue-300 dark:border-gray-600 p-2 rounded-lg bg-white dark:bg-gray-800"></div>
+                                <div class="md:col-span-3"><label class="block text-xs font-bold mb-1 text-green-700 dark:text-green-400">Bank Date (Cleared Date)</label><input type="date" id="incChqDate" class="w-full border border-green-300 dark:border-gray-600 p-2 rounded-lg bg-white dark:bg-gray-800"></div>
+                            </div>
+                        </div>
+
+                        <div id="expenseArea" class="hidden space-y-6">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div>
+                                    <label class="block text-sm font-bold mb-2">Expense Category</label>
+                                    <select id="expType" class="w-full border border-gray-300 dark:border-gray-600 p-2.5 rounded-lg bg-white dark:bg-gray-800 focus:ring-2 focus:ring-red-500" onchange="toggleExpenseType()">
+                                        <option value="Stock Payment">Stock Payment</option>
+                                        <option value="Bank Charge">Bank Charges</option>
+                                        <option value="OD Interest">OD Interest</option>
+                                        <option value="Utilities">Utilities (Water/Electricity)</option>
+                                        <option value="Salary">Salary/Wages</option>
+                                        <option value="Other Expenses">Other Expenses</option>
+                                    </select>
+                                </div>
+                                <div><label class="block text-sm font-bold mb-2">Amount (Rs.)</label><input type="number" id="expAmount" step="0.01" class="w-full border-2 border-red-300 dark:border-red-600 p-2.5 rounded-lg bg-red-50 dark:bg-gray-800/50 font-bold text-lg text-red-700 dark:text-red-400 focus:ring-2 focus:ring-red-500"></div>
+                            </div>
+                            <div id="expDynamicArea" class="grid grid-cols-1 md:grid-cols-2 gap-6 bg-gray-50 dark:bg-gray-800/50 p-5 rounded-xl border border-gray-200 dark:border-gray-700"></div>
+                        </div>
+
+                        <div class="mt-8 flex gap-4">
+                            <button type="button" onclick="resetTxForm()" class="px-6 py-3 border border-gray-300 dark:border-gray-600 rounded-lg font-bold hover:bg-gray-100 dark:hover:bg-gray-800 transition text-gray-700 dark:text-gray-300 shadow-sm">Clear</button>
+                            <button type="submit" id="txSaveBtn" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg shadow-lg transition"><i class="fa-solid fa-eye mr-2"></i> Preview & Save</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div id="masterData" class="tab-content">
+                <div class="glass p-6 mb-6">
+                    <div class="flex flex-col md:flex-row justify-between items-center mb-6 border-b border-gray-100 dark:border-gray-800 pb-4">
+                        <h2 class="text-2xl font-bold flex items-center"><i class="fa-solid fa-filter text-blue-500 mr-2"></i> Data Explorer</h2>
+                        <div class="space-x-2 mt-4 md:mt-0 flex flex-wrap gap-y-2">
+                            <button onclick="exportToCSV()" class="bg-gray-800 hover:bg-black text-white px-4 py-2 rounded-lg font-medium transition text-sm shadow"><i class="fa-solid fa-file-csv mr-2"></i> CSV</button>
+                            <button onclick="exportToExcel()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition text-sm shadow"><i class="fa-solid fa-file-excel mr-2"></i> Excel</button>
+                            <button onclick="exportChequesToExcel()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-medium transition text-sm shadow"><i class="fa-solid fa-money-check-dollar mr-2"></i> Cheques Excel</button>
+                            <button onclick="exportToPDF()" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-medium transition text-sm shadow"><i class="fa-solid fa-file-pdf mr-2"></i> PDF Report</button>
+                        </div>
+                    </div>
+                    
+                    <div class="flex gap-2 mb-4 overflow-x-auto pb-2">
+                        <button onclick="setQuickFilter('today')" class="px-4 py-1.5 text-sm bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-full hover:bg-gray-50 font-semibold shadow-sm transition">Today</button>
+                        <button onclick="setQuickFilter('week')" class="px-4 py-1.5 text-sm bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-full hover:bg-gray-50 font-semibold shadow-sm transition">Last 7 Days</button>
+                        <button onclick="setQuickFilter('month')" class="px-4 py-1.5 text-sm bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-full hover:bg-gray-50 font-semibold shadow-sm transition">This Month</button>
+                        <button onclick="setQuickFilter('all')" class="px-4 py-1.5 text-sm bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200 border border-blue-200 rounded-full hover:bg-blue-200 font-bold shadow-sm transition">Clear Filters</button>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-5 gap-4 bg-gray-50 dark:bg-gray-800/50 p-4 rounded-xl border border-gray-200 dark:border-gray-700">
+                         <div><label class="block text-xs font-bold mb-1 text-gray-600 dark:text-gray-400">Search</label>
+                            <input type="text" id="searchBar" oninput="debouncedApplyFilter()" placeholder="Keyword/Cheque..." class="w-full border border-gray-300 dark:border-gray-600 p-2 rounded-lg bg-white dark:bg-gray-800 focus:ring-1 focus:ring-blue-500"></div>
+                        <div><label class="block text-xs font-bold mb-1 text-gray-600 dark:text-gray-400">Account</label>
+                             <select id="filterAcc" onchange="applyFilter()" class="w-full border border-gray-300 dark:border-gray-600 p-2 rounded-lg bg-white dark:bg-gray-800 dynamic-acc-list-all focus:ring-1 focus:ring-blue-500"><option value="All">All Accounts</option></select></div>
+                        <div><label class="block text-xs font-bold mb-1 text-gray-600 dark:text-gray-400">Type</label>
+                            <select id="filterCat" onchange="applyFilter()" class="w-full border border-gray-300 dark:border-gray-600 p-2 rounded-lg bg-white dark:bg-gray-800 focus:ring-1 focus:ring-blue-500"><option value="All">All</option><option value="Income">Income Only</option><option value="Expense">Expense Only</option></select></div>
+                        <div><label class="block text-xs font-bold mb-1 text-gray-600 dark:text-gray-400">From Date</label>
+                            <input type="date" id="filterFrom" onchange="applyFilter()" class="w-full border border-gray-300 dark:border-gray-600 p-2 rounded-lg bg-white dark:bg-gray-800 focus:ring-1 focus:ring-blue-500"></div>
+                         <div><label class="block text-xs font-bold mb-1 text-gray-600 dark:text-gray-400">To Date</label>
+                            <input type="date" id="filterTo" onchange="applyFilter()" class="w-full border border-gray-300 dark:border-gray-600 p-2 rounded-lg bg-white dark:bg-gray-800 focus:ring-1 focus:ring-blue-500"></div>
+                    </div>
+
+                    <div class="flex gap-4 mt-6">
+                        <div class="flex-1 bg-green-50 dark:bg-gray-800/80 p-4 rounded-xl border-l-4 border-green-500 shadow-sm">
+                            <p class="text-xs text-green-700 dark:text-green-400 font-bold uppercase tracking-wider">Filtered Income</p><h4 class="text-xl font-black text-green-600 mt-1" id="fltInc">Rs. 0.00</h4>
+                        </div>
+                        <div class="flex-1 bg-red-50 dark:bg-gray-800/80 p-4 rounded-xl border-l-4 border-red-500 shadow-sm">
+                            <p class="text-xs text-red-700 dark:text-red-400 font-bold uppercase tracking-wider">Filtered Expense</p><h4 class="text-xl font-black text-red-600 mt-1" id="fltExp">Rs. 0.00</h4>
+                        </div>
+                        <div class="flex-1 bg-blue-50 dark:bg-gray-800/80 p-4 rounded-xl border-l-4 border-blue-500 shadow-sm">
+                            <p class="text-xs text-blue-700 dark:text-blue-400 font-bold uppercase tracking-wider">Net Balance</p><h4 class="text-xl font-black text-blue-600 mt-1" id="fltBal">Rs. 0.00</h4>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass overflow-hidden shadow-sm">
+                    <div class="overflow-x-auto">
+                        <table class="w-full whitespace-no-wrap table-auto text-sm" id="masterTableExport">
+                            <thead>
+                                <tr class="bg-gray-800 text-white uppercase text-xs font-bold tracking-wider">
+                                    <th class="py-4 px-4 text-left">Date</th>
+                                    <th class="py-4 px-4 text-left">Account</th>
+                                    <th class="py-4 px-4 text-center">Category</th>
+                                    <th class="py-4 px-4 text-left">Type</th>
+                                    <th class="py-4 px-4 text-left">Description / Route</th>
+                                    <th class="py-4 px-4 text-center print:hidden">Audit Status</th>
+                                    <th class="py-4 px-4 text-right">Income (Rs)</th>
+                                    <th class="py-4 px-4 text-right">Expense (Rs)</th>
+                                    <th class="py-4 px-4 text-center print:hidden">Actions</th>
+                                </tr>
+                             </thead>
+                            <tbody class="border-b dark:border-gray-700" id="masterTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div id="odInterest" class="tab-content max-w-7xl mx-auto">
+                <div class="glass p-6 mb-6">
+                    <h2 class="text-2xl font-bold mb-6 flex items-center">
+                        <i class="fa-solid fa-percent text-red-500 mr-3"></i>
+                        OD Interest Calculator
+                    </h2>
+
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div>
+                            <label class="block text-sm font-bold mb-2">Bank Account</label>
+                            <select id="odAcc" class="w-full border p-3 rounded-lg dynamic-acc-list bg-white dark:bg-gray-800"></select>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold mb-2">Month</label>
+                            <input type="month" id="odMonth" class="w-full border p-3 rounded-lg bg-white dark:bg-gray-800">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold mb-2">Rate 1 (%)</label>
+                            <input type="number" step="0.01" id="odRate1" class="w-full border p-3 rounded-lg bg-white dark:bg-gray-800">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold mb-2">Rate 1 Until Day</label>
+                            <input type="number" id="odDay1" value="15" class="w-full border p-3 rounded-lg bg-white dark:bg-gray-800">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold mb-2">Rate 2 (%)</label>
+                            <input type="number" step="0.01" id="odRate2" class="w-full border p-3 rounded-lg bg-white dark:bg-gray-800">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-bold mb-2">Rate 2 From Day</label>
+                            <input type="number" id="odDay2" value="16" class="w-full border p-3 rounded-lg bg-white dark:bg-gray-800">
+                        </div>
+                    </div>
+
+                    <div class="mt-6 flex gap-4">
+                        <button onclick="calculateODInterest()" class="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-bold shadow-lg">
+                            <i class="fa-solid fa-calculator mr-2"></i> Calculate Interest
+                        </button>
+                        <button onclick="downloadODPdf()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-bold shadow-lg">
+                            <i class="fa-solid fa-file-pdf mr-2"></i> Download PDF
+                        </button>
+                    </div>
+                </div>
+
+                <div class="glass p-6 overflow-auto">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="bg-gray-100 dark:bg-gray-800">
+                                <th class="p-3 text-left">Date</th>
+                                <th class="p-3 text-right">Closing Balance</th>
+                                <th class="p-3 text-right">Rate</th>
+                                <th class="p-3 text-right">Daily Interest</th>
+                            </tr>
+                        </thead>
+                        <tbody id="odResultBody"></tbody>
+                    </table>
+                    <div class="mt-6 text-right">
+                        <h3 class="text-2xl font-black text-red-600">
+                            Total Interest: <span id="odTotalInterest">Rs. 0.00</span>
+                        </h3>
+                    </div>
+                </div>
+            </div>
+
+            <div id="settings" class="tab-content max-w-4xl mx-auto">
+                <h2 class="text-2xl font-bold mb-6 flex items-center"><i class="fa-solid fa-gears text-gray-500 mr-3"></i> System Settings & Trash</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="glass p-6">
+                        <h3 class="font-bold mb-4 text-red-600 flex items-center"><i class="fa-solid fa-trash-can-arrow-up mr-2"></i> Recycle Bin</h3>
+                        <div class="max-h-72 overflow-y-auto pr-2 bg-gray-50 dark:bg-gray-800/50 p-2 rounded-xl border border-gray-100 dark:border-gray-700">
+                            <ul id="recycleBinList" class="space-y-3 text-sm"></ul>
+                        </div>
+                    </div>
+                    <div class="glass p-6">
+                        <h3 class="font-bold mb-4 text-blue-600 flex items-center"><i class="fa-solid fa-hard-drive mr-2"></i> Data Management</h3>
+                        <p class="text-sm text-gray-600 dark:text-gray-400 mb-4 font-medium">Download all system data securely as a JSON file.</p>
+                        <button onclick="backupData()" class="w-full bg-blue-600 text-white py-3 rounded-lg font-bold mb-6 hover:bg-blue-700 shadow-md transition"><i class="fa-solid fa-download mr-2"></i> Backup All Data</button>
+                        
+                        <hr class="my-6 border-gray-200 dark:border-gray-700">
+                        <p class="text-sm text-gray-600 dark:text-gray-400 mb-2 font-medium">Restore from a previous backup file.</p>
+                        <input type="file" id="restoreFile" accept=".json" class="w-full text-sm mb-3 border border-gray-300 dark:border-gray-600 p-2 rounded bg-gray-50 dark:bg-gray-800">
+                        <button onclick="restoreData()" class="w-full bg-gray-700 text-white font-bold py-3 rounded-lg shadow-md hover:bg-gray-800 transition"><i class="fa-solid fa-upload mr-2"></i> Restore Data</button>
+                        
+                        <hr class="my-6 border-red-200 dark:border-red-900/50">
+                        <h3 class="font-bold mb-4 text-orange-600 flex items-center"><i class="fa-solid fa-wrench mr-2"></i> Data Correction Tools</h3>
+                        <p class="text-sm text-gray-600 dark:text-gray-400 mb-2 font-medium">අතීතයේ Excel හරහා අප්ලෝඩ් කළ දත්ත වල දින 1ක් පසුපසට ගොස් ඇත්නම්, එය නිවැරදි කිරීමට මෙය භාවිතා කරන්න. (සියලුම දත්ත සඳහා දින 1ක් ඉදිරියට ගමන් කරයි)</p>
+                        <button onclick="fixExistingDates()" class="w-full bg-orange-50 text-orange-700 dark:bg-orange-900/30 border border-orange-200 dark:text-orange-400 font-bold py-3 rounded-lg hover:bg-orange-100 transition shadow-sm mb-6"><i class="fa-solid fa-calendar-plus mr-2"></i> Correct Previous Excel Dates (+1 Day)</button>
+
+                        <hr class="my-6 border-red-200 dark:border-red-900/50">
+                        <button onclick="hardResetSystem()" class="w-full bg-red-50 text-red-700 dark:bg-red-900/30 border border-red-200 dark:text-red-400 font-bold py-3 rounded-lg hover:bg-red-100 transition"><i class="fa-solid fa-triangle-exclamation mr-2"></i> Factory Reset / Wipe All Data</button>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <div id="smartImportModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden flex justify-center items-center z-50 p-4">
+        <div class="glass rounded-2xl shadow-2xl p-6 w-full max-w-4xl text-center flex flex-col max-h-[95vh] overflow-y-auto relative">
+            <div class="sticky top-0 bg-white dark:bg-[#1e293b] z-10 pb-4 border-b border-gray-200 dark:border-gray-700 mb-4 flex justify-between items-center">
+                <div class="text-left">
+                    <h3 class="text-2xl font-bold text-gray-900 dark:text-white"><i class="fa-solid fa-wand-magic-sparkles text-blue-500 mr-2"></i> Smart Excel Import</h3>
+                    <p class="text-sm font-bold text-orange-600" id="importProgressTxt">Reviewing Row 1 of 5</p>
+                    <p class="text-xs text-gray-500">Please review and complete any missing data before saving.</p>
+                </div>
+                <button onclick="cancelSmartImport()" class="text-red-500 hover:bg-red-50 p-2 rounded font-bold transition"><i class="fa-solid fa-xmark mr-1"></i> Cancel All</button>
+            </div>
+            
+            <form id="importForm" class="text-left space-y-4" onsubmit="saveImportRow(event)">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 bg-gray-50 dark:bg-gray-800 p-4 rounded-xl">
+                    <div>
+                        <label class="block text-sm font-bold mb-1">Category</label>
+                        <div class="flex space-x-2">
+                            <label class="flex items-center"><input type="radio" name="impCategory" value="Income" checked onchange="toggleImportForm()" class="mr-1 text-green-600"> <span class="font-bold text-green-600 text-sm">Income</span></label>
+                            <label class="flex items-center"><input type="radio" name="impCategory" value="Expense" onchange="toggleImportForm()" class="mr-1 text-red-600"> <span class="font-bold text-red-600 text-sm">Expense</span></label>
+                        </div>
+                    </div>
+                    <div><label class="block text-sm font-bold mb-1">Bank Account</label><select id="impAccount" required class="w-full border p-2 rounded-lg bg-white dark:bg-gray-700 dynamic-acc-list"></select></div>
+                    <div><label class="block text-sm font-bold mb-1">Date</label><input type="date" id="impDate" required class="w-full border p-2 rounded-lg bg-white dark:bg-gray-700"></div>
+                </div>
+
+                <div id="impIncomeArea" class="space-y-4 border border-green-200 dark:border-green-900 p-4 rounded-xl">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div><label class="block text-sm font-bold mb-1">Payment Method</label><select id="impIncType" onchange="toggleImportForm()" class="w-full border p-2 rounded-lg bg-white dark:bg-gray-700"><option value="Cash">Cash/Transfer</option><option value="Cheque">Cheque</option></select></div>
+                        <div><label class="block text-sm font-bold mb-1 text-green-700">Amount (Rs.)</label><input type="number" id="impIncAmount" step="0.01" class="w-full border-2 border-green-300 p-2 rounded-lg bg-white font-bold"></div>
+                    </div>
+                    <div id="impIncCashDetails" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div><label class="block text-xs font-bold mb-1">Description / Route</label><input type="text" id="impIncMethod" class="w-full border p-2 rounded bg-white dark:bg-gray-700"></div>
+                        <div><label class="block text-xs font-bold mb-1">Notes</label><input type="text" id="impIncNotes" class="w-full border p-2 rounded bg-white dark:bg-gray-700"></div>
+                    </div>
+                    <div id="impIncChequeDetails" class="hidden grid-cols-1 md:grid-cols-3 gap-4">
+                        <div><label class="block text-xs font-bold mb-1">Issuer (Shop Name)</label><input type="text" id="impIncChqMethod" class="w-full border p-2 rounded bg-white dark:bg-gray-700"></div>
+                        <div><label class="block text-xs font-bold mb-1">Route</label><input type="text" id="impIncRoute" class="w-full border p-2 rounded bg-white dark:bg-gray-700"></div>
+                        <div><label class="block text-xs font-bold mb-1">Cheque No</label><input type="text" id="impIncChqNo" class="w-full border p-2 rounded bg-white dark:bg-gray-700"></div>
+                        <div><label class="block text-xs font-bold mb-1">Realize Date (On Cheque)</label><input type="date" id="impIncSumDate" class="w-full border p-2 rounded bg-white dark:bg-gray-700"></div>
+                        <div class="col-span-2"><label class="block text-xs font-bold mb-1">Bank Date (Cleared Date)</label><input type="date" id="impIncChqDate" class="w-full border p-2 rounded bg-white dark:bg-gray-700"></div>
+                    </div>
+                </div>
+
+                <div id="impExpenseArea" class="hidden space-y-4 border border-red-200 dark:border-red-900 p-4 rounded-xl">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div><label class="block text-sm font-bold mb-1">Expense Category</label>
+                            <select id="impExpType" onchange="toggleImportForm()" class="w-full border p-2 rounded-lg bg-white dark:bg-gray-700">
+                                <option value="Stock Payment">Stock Payment</option><option value="Bank Charge">Bank Charges</option><option value="OD Interest">OD Interest</option><option value="Utilities">Utilities</option><option value="Salary">Salary/Wages</option><option value="Other Expenses">Other Expenses</option>
+                            </select>
+                        </div>
+                        <div><label class="block text-sm font-bold mb-1 text-red-700">Amount (Rs.)</label><input type="number" id="impExpAmount" step="0.01" class="w-full border-2 border-red-300 p-2 rounded-lg bg-white font-bold"></div>
+                    </div>
+                    <div id="impExpDynamicArea" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+                </div>
+
+                <div class="flex justify-end space-x-3 pt-4 border-t border-gray-200 mt-4">
+                    <button type="button" onclick="skipImportRow()" class="px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white rounded-lg font-bold hover:bg-gray-300 transition">Skip Row</button>
+                    <button type="submit" class="px-6 py-3 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 shadow-md transition"><i class="fa-solid fa-check mr-2"></i> Confirm & Save Row</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div id="accHistoryModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden flex justify-center items-center z-50 p-4 opacity-0 transition-opacity duration-300">
+        <div class="glass rounded-2xl shadow-2xl w-full max-w-3xl flex flex-col max-h-[90vh] transform scale-95 transition-transform duration-300" id="accModalContent">
+            <div class="p-6 border-b border-gray-200 dark:border-gray-800 flex justify-between items-center bg-gray-50 dark:bg-gray-800 rounded-t-2xl">
+                <div><h3 class="text-xl font-bold text-gray-900 dark:text-white" id="modalAccName">Bank Name</h3><p class="text-sm text-gray-500 font-medium">Last 7 Days Financial Report</p></div>
+                <button onclick="closeAccModal()" class="text-gray-400 hover:text-red-500 transition bg-white dark:bg-gray-700 rounded-full w-8 h-8 flex items-center justify-center shadow-sm"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="p-6 overflow-y-auto flex-1">
+                <table class="w-full text-sm">
+                    <thead><tr class="text-left text-gray-500 border-b border-gray-200 dark:border-gray-700"><th class="pb-2">Date</th><th class="pb-2">Type</th><th class="pb-2 text-right">Income (Rs)</th><th class="pb-2 text-right">Expense (Rs)</th></tr></thead>
+                    <tbody id="modalHistoryBody"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div id="previewModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden flex justify-center items-center z-50 p-4">
+        <div class="glass rounded-2xl shadow-2xl p-6 w-full max-w-md text-center">
+            <i class="fa-solid fa-circle-question text-5xl text-blue-500 mb-4"></i>
+            <h3 class="text-xl font-bold mb-2 text-gray-900 dark:text-white">Confirm Data Entry</h3>
+            <div id="previewContent" class="text-sm text-gray-700 dark:text-gray-300 mb-6 bg-gray-50 dark:bg-gray-800 p-4 rounded-xl text-left border border-gray-200 dark:border-gray-700 shadow-inner"></div>
+            <div class="flex space-x-3">
+                <button onclick="document.getElementById('previewModal').classList.add('hidden')" class="flex-1 py-3 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white rounded-lg font-bold hover:bg-gray-300 transition">Edit / Back</button>
+                <button onclick="confirmSaveTx()" class="flex-1 py-3 bg-blue-600 text-white rounded-lg font-bold hover:bg-blue-700 shadow-md transition">Save Transaction</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="returnModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden flex justify-center items-center z-50 p-4">
+        <div class="glass rounded-2xl shadow-2xl p-6 w-full max-w-md text-center">
+            <i class="fa-solid fa-money-bill-transfer text-5xl text-red-500 mb-4"></i>
+            <h3 class="text-xl font-bold mb-2 text-gray-900 dark:text-white">Mark Cheque as Returned</h3>
+            <p class="text-sm text-gray-500 mb-4">This will deduct the cheque amount from the balance and add a bank charge expense.</p>
+            <input type="hidden" id="returnTxId">
+            <div class="space-y-4 text-left mb-6">
+                <div>
+                    <label class="block text-sm font-bold mb-1">Return Reason</label>
+                    <input type="text" id="retReason" class="w-full border border-gray-300 dark:border-gray-600 p-2.5 rounded-lg bg-gray-50 dark:bg-gray-800" placeholder="e.g., Insufficient Funds">
+                </div>
+                <div>
+                    <label class="block text-sm font-bold mb-1 text-red-600">Bank Charge (Rs.)</label>
+                    <input type="number" id="retCharge" step="0.01" class="w-full border-2 border-red-300 dark:border-red-600 p-2.5 rounded-lg bg-white dark:bg-gray-800 font-bold" value="0">
+                </div>
+            </div>
+            <div class="flex space-x-3">
+                <button onclick="closeReturnModal()" class="flex-1 py-3 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white rounded-lg font-bold hover:bg-gray-300 transition">Cancel</button>
+                <button onclick="processReturn()" class="flex-1 py-3 bg-red-600 text-white rounded-lg font-bold hover:bg-red-700 shadow-md transition">Confirm Return</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast" class="fixed top-5 right-5 bg-green-600 text-white px-6 py-3 rounded-lg shadow-xl opacity-0 pointer-events-none z-[100] transform translate-y-[-20px] transition-all duration-300 flex items-center space-x-3 font-medium">
+        <i class="fa-solid fa-check-circle text-xl" id="toastIcon"></i><span id="toastMsg"></span>
+    </div>
+
+    <script>
+        // ==========================================
+        // Firebase Setup & Authentication
+        // ==========================================
+
+        // TODO: පහතින් ඇති 'firebaseConfig' එක ඔබේ Firebase Project එකෙන් ලබාගෙන මෙහි Paste කරන්න.
+        const firebaseConfig = {
+            apiKey: "AIzaSyDBhMWVj2oDwvgRSMzi3xBe7eIslgJejKk",
+            authDomain: "geethara-bank.firebaseapp.com",
+            databaseURL: "https://geethara-bank-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "geethara-bank",
+            storageBucket: "geethara-bank.firebasestorage.app",
+            messagingSenderId: "982092316880",
+            appId: "1:982092316880:web:129f5a5d4d3c5760899ed5"
+        };
+        
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.database();
+
+        // TODO: පද්ධතියට ඇතුළු විය හැකි Google ඊමේල් ලිපිනයන් මෙහි ඇතුලත් කරන්න.
+        const ALLOWED_EMAILS = [
+            "ashinsasathsara@gmail.com",
+            "ranjithu1234@gmail.com",
+            "pkumara125@gmail.com",
+            "1234kumarika@gmail.com"
+        ];
+
+        // --- DATA STATE ---
+        let accounts = [];
+        let transactions = [];
+        let deletedTxs = [];
+        
+        let tempTxData = null;
+        let financeChartObj = null;
+        let pieChartObj = null;
+        let odInterestResults = [];
+        let odInterestTotal = 0;
+        let stateHistory = [];
+        let stateRedo = [];
+        let pendingImports = [];
+        let currentImportIdx = 0;
+        let searchTimeout;
+        let currentFilteredTxs = []; // For Excel Export
+
+        const fmt = (num) => new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(num || 0);
+        function toLocalISODate(d) {
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        // Firebase Auth Listener
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                if (ALLOWED_EMAILS.includes(user.email)) {
+                    document.getElementById('loginScreen').style.display = 'none';
+                    showToast(`Welcome ${user.displayName}`);
+                    loadFirebaseData();
+                } else {
+                    auth.signOut();
+                    alert("Unauthorized Email: " + user.email);
+                }
+            } else {
+                document.getElementById('loginScreen').style.display = 'flex';
+            }
+        });
+
+        function signInWithGoogle() {
+            const provider = new firebase.auth.GoogleAuthProvider();
+            auth.signInWithPopup(provider).catch(error => alert(error.message));
+        }
+
+        function logout() {
+            auth.signOut().then(() => {
+                window.location.reload();
+            });
+        }
+
+        // Firebase Realtime DB Data Loading
+        function loadFirebaseData() {
+            db.ref('geethara_db').on('value', (snapshot) => {
+                const data = snapshot.val() || {};
+                accounts = data.accounts || [];
+                transactions = data.transactions || [];
+                deletedTxs = data.deletedTxs || [];
+                refreshAll();
+            });
+        }
+
+        // Overridden Save Data to Push to Firebase
+        function saveData() { 
+            db.ref('geethara_db').set({
+                accounts: accounts,
+                transactions: transactions,
+                deletedTxs: deletedTxs
+            }).catch(error => console.error("Error saving to Firebase: ", error));
+        }
+
+        window.onload = () => {
+            document.getElementById('currentDate').innerText = new Date().toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
+            document.getElementById('txDate').valueAsDate = new Date();
+            document.getElementById('histDate').valueAsDate = new Date();
+            
+            if(localStorage.getItem('geethataTheme') === 'dark') document.body.classList.add('dark-mode');
+            updateThemeIcon();
+            toggleTxForm();
+            updateUndoRedoButtons();
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    closeAccModal();
+                    document.getElementById('previewModal').classList.add('hidden');
+                    closeReturnModal();
+                }
+            });
+        };
+
+        // --- Core Functions remain untouched but call new saveData() ---
+        
+        function getDailyClosingBalance(accId, dateStr) {
+            let acc = accounts.find(a => a.id === accId);
+            if(!acc) return 0;
+            let current = acc.balance;
+
+            let txs = transactions.filter(t => {
+                if(t.accId !== accId) return false;
+                let effectiveDate = (t.category === 'Income' && t.type === 'Cheque' && t.chqDate) ? t.chqDate : t.date;
+                return effectiveDate <= dateStr;
+            });
+            txs.forEach(t => {
+                if(t.isReturned) return;
+                current += t.category === 'Income' ? t.amount : -t.amount;
+            });
+            return current;
+        }
+
+        function calculateODInterest() {
+            let accId = document.getElementById('odAcc').value;
+            let month = document.getElementById('odMonth').value;
+            if(!accId || !month) {
+                showToast('Select Account and Month', true); return;
+            }
+
+            let rate1 = parseFloat(document.getElementById('odRate1').value || 0);
+            let rate2 = parseFloat(document.getElementById('odRate2').value || 0);
+            let day1 = parseInt(document.getElementById('odDay1').value || 15);
+            let day2 = parseInt(document.getElementById('odDay2').value || 16);
+            odInterestResults = [];
+            odInterestTotal = 0;
+            let [year, mon] = month.split('-');
+
+            let daysInMonth = new Date(year, mon, 0).getDate();
+            for(let d = 1; d <= daysInMonth; d++) {
+                let dt = `${year}-${String(mon).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+                let bal = getDailyClosingBalance(accId, dt);
+
+                if(bal < 0) {
+                    let rate = d <= day1 ? rate1 : rate2;
+                    let interest = (Math.abs(bal) * rate / 100) / 365;
+                    odInterestResults.push({ date: dt, balance: bal, rate: rate, interest: interest });
+                    odInterestTotal += interest;
+                }
+            }
+
+            renderODResults();
+        }
+
+        function renderODResults() {
+            let tbody = document.getElementById('odResultBody');
+            let html = '';
+            odInterestResults.forEach(r => {
+                html += `<tr class="border-b dark:border-gray-700"><td class="p-3">${r.date}</td><td class="p-3 text-right text-red-600 font-bold">Rs. ${fmt(r.balance)}</td><td class="p-3 text-right">${r.rate}%</td><td class="p-3 text-right font-bold">Rs. ${fmt(r.interest)}</td></tr>`;
+            });
+            tbody.innerHTML = html;
+            document.getElementById('odTotalInterest').innerText = `Rs. ${fmt(odInterestTotal)}`;
+        }
+
+        function downloadODPdf() {
+            if(odInterestResults.length === 0) { showToast('Calculate interest first', true); return; }
+            const { jsPDF } = window.jspdf; const doc = new jsPDF('landscape');
+            let accId = document.getElementById('odAcc').value; let acc = accounts.find(a => a.id === accId);
+            doc.setFontSize(20); doc.text('OD INTEREST REPORT', 14, 20); doc.setFontSize(11);
+            doc.text(`Bank: ${acc.bank}`, 14, 30); doc.text(`Account: ${acc.number}`, 14, 37);
+            let rows = []; odInterestResults.forEach(r => { rows.push([ r.date, fmt(r.balance), r.rate + '%', fmt(r.interest) ]); });
+            doc.autoTable({ head: [['Date','Closing Balance','Rate','Interest']], body: rows, startY: 45, styles: { fontSize: 9 }, headStyles: { fillColor: [220,38,38] } });
+            doc.setFontSize(14); doc.text(`TOTAL INTEREST : Rs. ${fmt(odInterestTotal)}`, 14, doc.lastAutoTable.finalY + 15);
+            doc.save('OD_Interest_Report.pdf'); showToast('OD Interest PDF Downloaded!');
+        }
+        
+        function saveState() {
+            stateHistory.push({ txs: JSON.parse(JSON.stringify(transactions)), accs: JSON.parse(JSON.stringify(accounts)), dels: JSON.parse(JSON.stringify(deletedTxs)) });
+            if(stateHistory.length > 30) stateHistory.shift(); 
+            stateRedo = []; 
+            updateUndoRedoButtons();
+        }
+
+        function undo() {
+            if(stateHistory.length === 0) return;
+            stateRedo.push({ txs: JSON.parse(JSON.stringify(transactions)), accs: JSON.parse(JSON.stringify(accounts)), dels: JSON.parse(JSON.stringify(deletedTxs)) });
+            let prev = stateHistory.pop(); transactions = prev.txs; accounts = prev.accs; deletedTxs = prev.dels;
+            saveData(); refreshAll(); updateUndoRedoButtons(); showToast('Undo successful', false);
+        }
+
+        function redo() {
+            if(stateRedo.length === 0) return;
+            stateHistory.push({ txs: JSON.parse(JSON.stringify(transactions)), accs: JSON.parse(JSON.stringify(accounts)), dels: JSON.parse(JSON.stringify(deletedTxs)) });
+            let next = stateRedo.pop(); transactions = next.txs; accounts = next.accs; deletedTxs = next.dels;
+            saveData(); refreshAll(); updateUndoRedoButtons(); showToast('Redo successful', false);
+        }
+
+        function updateUndoRedoButtons() {
+            let btnUndo = document.getElementById('btnUndo'); let btnRedo = document.getElementById('btnRedo');
+            if(btnUndo) { if(stateHistory.length === 0) btnUndo.classList.add('btn-disabled'); else btnUndo.classList.remove('btn-disabled'); }
+            if(btnRedo) { if(stateRedo.length === 0) btnRedo.classList.add('btn-disabled'); else btnRedo.classList.remove('btn-disabled'); }
+        }
+
+        function openTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('bg-gray-100', 'dark:bg-gray-800', 'text-blue-600'));
+            document.getElementById(tabId).classList.add('active');
+            const btn = document.querySelector(`.tab-btn[data-tab="${tabId}"]`);
+            if(btn) btn.classList.add('bg-gray-100', 'dark:bg-gray-800');
+            if(tabId === 'dashboard') { initChart(); initPieChart(); }
+        }
+
+        function toggleDarkMode() {
+            document.body.classList.toggle('dark-mode');
+            localStorage.setItem('geethataTheme', document.body.classList.contains('dark-mode') ? 'dark' : 'light');
+            updateThemeIcon(); initChart(); initPieChart();
+        }
+
+        function updateThemeIcon() {
+            const icon = document.getElementById('themeIcon');
+            if(document.body.classList.contains('dark-mode')) { icon.classList.replace('fa-moon', 'fa-sun'); icon.classList.add('text-yellow-400'); } 
+            else { icon.classList.replace('fa-sun', 'fa-moon'); icon.classList.remove('text-yellow-400'); }
+        }
+
+        function showToast(msg, isError = false) {
+            const toast = document.getElementById('toast');
+            toast.className = `fixed top-5 right-5 px-6 py-3 rounded-xl shadow-2xl z-[100] transition-all duration-300 flex items-center space-x-3 font-medium ${isError ? 'bg-red-600' : 'bg-green-600'} text-white border border-white/20`;
+            document.getElementById('toastIcon').className = `fa-solid text-xl ${isError ? 'fa-triangle-exclamation' : 'fa-check-circle'}`;
+            document.getElementById('toastMsg').innerText = msg;
+            toast.style.opacity = '1'; toast.style.transform = 'translateY(0)';
+            setTimeout(() => { toast.style.opacity = '0'; toast.style.transform = 'translateY(-20px)'; }, 3000);
+        }
+
+        function refreshAll() {
+            updateAccountDropdowns(); renderAccounts(); applyFilter(); updateDashboard(); renderRecycleBin();
+        }
+
+        function saveAccount(e) {
+            e.preventDefault(); saveState();
+            const acc = { id: Date.now().toString(), bank: document.getElementById('accBankName').value, number: document.getElementById('accNumber').value, date: document.getElementById('accDate').value, balance: parseFloat(document.getElementById('accBalance').value) };
+            accounts.push(acc); saveData(); e.target.reset(); refreshAll(); showToast('Account added successfully.');
+        }
+
+        function getAccBalance(accId, upToDateStr = null) {
+            let acc = accounts.find(a => a.id === accId);
+            if(!acc) return 0;
+            let current = acc.balance;
+            let filteredTxs = transactions.filter(t => t.accId === accId);
+            
+            let limitDateObj = upToDateStr ? new Date(upToDateStr) : new Date();
+            limitDateObj.setHours(23, 59, 59, 999);
+            let limitTime = limitDateObj.getTime();
+            filteredTxs = filteredTxs.filter(t => {
+                let effectiveDateStr = (t.category === 'Income' && t.type === 'Cheque' && t.chqDate) ? t.chqDate : t.date;
+                let effTime = new Date(effectiveDateStr).getTime();
+                return effTime <= limitTime;
+            });
+            filteredTxs.forEach(t => {
+                if(t.isReturned) return; 
+                current += (t.category === 'Income' ? t.amount : -t.amount);
+            });
+            return current;
+        }
+
+        function renderAccounts() {
+            const tbody = document.getElementById('accountListBody');
+            let htmlStr = '';
+            accounts.forEach(acc => {
+                let bal = getAccBalance(acc.id);
+                let balClass = bal < 10000 ? 'text-red-600 dark:text-red-400 font-extrabold' : 'text-blue-700 dark:text-blue-400 font-bold';
+                htmlStr += `<tr class="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer transition" onclick="openAccHistory('${acc.id}')"><td class="py-4 px-4 font-bold text-gray-800 dark:text-gray-200"><i class="fa-solid fa-building-columns text-gray-400 mr-2"></i>${acc.bank}</td><td class="py-4 px-4 text-gray-600 dark:text-gray-400 font-medium">${acc.number}</td><td class="py-4 px-4 text-right ${balClass} text-lg">Rs. ${fmt(bal)}</td></tr>`;
+            });
+            tbody.innerHTML = htmlStr;
+        }
+
+        function updateAccountDropdowns() {
+            let opts = '<option value="">-- Select Account --</option>'; let allOpts = '<option value="All">All Accounts</option>';
+            accounts.forEach(acc => { let txt = `<option value="${acc.id}">${acc.bank} - ${acc.number}</option>`; opts += txt; allOpts += txt; });
+            document.querySelectorAll('.dynamic-acc-list').forEach(el => el.innerHTML = opts);
+            document.querySelectorAll('.dynamic-acc-list-all').forEach(el => el.innerHTML = allOpts);
+        }
+
+        function checkHistoricalBalance() {
+            let dateStr = document.getElementById('histDate').value; let accId = document.getElementById('histAcc').value;
+            if(!dateStr || !accId) return showToast('Please select Date and Account', true);
+            let bal = getAccBalance(accId, dateStr);
+            document.getElementById('histResult').classList.remove('hidden');
+            let balEl = document.getElementById('histBalanceVal');
+            balEl.innerText = `Rs. ${fmt(bal)}`; balEl.className = bal < 0 ? "text-xl font-black text-red-600" : "text-xl font-black text-blue-700 dark:text-blue-400";
+        }
+
+        function openAccHistory(accId) {
+            let acc = accounts.find(a => a.id === accId); if(!acc) return;
+            document.getElementById('modalAccName').innerText = `${acc.bank} (${acc.number})`;
+            let today = new Date(); let sevenAgo = new Date(); sevenAgo.setDate(today.getDate() - 7);
+            let recentTxs = transactions.filter(t => t.accId === accId && new Date(t.date) >= sevenAgo).sort((a,b)=>new Date(b.date)-new Date(a.date));
+            let tbody = document.getElementById('modalHistoryBody');
+            let htmlStr = '';
+            if(recentTxs.length === 0) { htmlStr = `<tr><td colspan="4" class="text-center py-6 font-medium text-gray-500">No transactions in last 7 days.</td></tr>`; } 
+            else {
+                recentTxs.forEach(tx => {
+                    let amtSpanInc = tx.isReturned ? `<span class="line-through text-gray-400">${fmt(tx.amount)}</span>` : fmt(tx.amount);
+                    htmlStr += `<tr class="border-b border-gray-100 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800/50"><td class="py-3 px-2 font-medium">${tx.date}</td><td class="py-3 px-2 text-xs font-bold text-gray-600 dark:text-gray-400">${tx.type} ${tx.isReturned ? '(Returned)' : ''}</td><td class="py-3 px-2 text-right font-bold text-green-600">${tx.category==='Income'?amtSpanInc:'-'}</td><td class="py-3 px-2 text-right font-bold text-red-600">${tx.category==='Expense'?fmt(tx.amount):'-'}</td></tr>`;
+                });
+            }
+            tbody.innerHTML = htmlStr;
+            let modal = document.getElementById('accHistoryModal'); let content = document.getElementById('accModalContent');
+            modal.classList.remove('hidden'); setTimeout(() => { modal.classList.remove('opacity-0'); content.classList.remove('scale-95'); }, 10);
+        }
+
+        function closeAccModal() {
+            document.getElementById('accHistoryModal').classList.add('opacity-0'); document.getElementById('accModalContent').classList.add('scale-95');
+            setTimeout(() => document.getElementById('accHistoryModal').classList.add('hidden'), 300);
+        }
+
+        function openReturnModal(id) {
+            document.getElementById('returnTxId').value = id; document.getElementById('retReason').value = ''; document.getElementById('retCharge').value = '0'; document.getElementById('returnModal').classList.remove('hidden');
+        }
+
+        function closeReturnModal() { document.getElementById('returnModal').classList.add('hidden'); }
+
+        function processReturn() {
+            let id = document.getElementById('returnTxId').value; let reason = document.getElementById('retReason').value || 'Returned'; let charge = parseFloat(document.getElementById('retCharge').value) || 0;
+            let tx = transactions.find(t => t.id === id); if(!tx) return;
+            saveState();
+            tx.isReturned = true; tx.returnReason = reason;
+            if(charge > 0) {
+                let chargeTx = { id: Date.now().toString() + Math.floor(Math.random()*1000), category: 'Expense', accId: tx.accId, date: tx.chqDate || tx.date, timestamp: new Date().toISOString(), type: 'Bank Charge', amount: charge, desc: `Return Charge for Chq: ${tx.chqNo || '-'} | Reason: ${reason}`, audits: [] };
+                transactions.push(chargeTx);
+            }
+            saveData(); closeReturnModal(); refreshAll(); showToast('Cheque marked as returned successfully!');
+        }
+
+        function toggleTxForm() {
+            let isInc = document.querySelector('input[name="txCategory"]:checked').value === 'Income';
+            document.getElementById('incomeArea').style.display = isInc ? 'block' : 'none';
+            document.getElementById('expenseArea').style.display = !isInc ? 'block' : 'none';
+            document.getElementById('incAmount').required = isInc;
+            document.getElementById('expAmount').required = !isInc;
+            if(isInc) toggleIncomeType(); else toggleExpenseType();
+        }
+
+        function toggleIncomeType() {
+            let type = document.getElementById('incType').value;
+            document.getElementById('incCashDetails').style.display = type === 'Cash' ? 'grid' : 'none';
+            document.getElementById('incChequeDetails').style.display = type === 'Cheque' ? 'grid' : 'none';
+        }
+
+        function toggleExpenseType() {
+            let type = document.getElementById('expType').value; let div = document.getElementById('expDynamicArea'); div.innerHTML = '';
+            if(type === 'Stock Payment') div.innerHTML = `<div><label class="block text-sm font-bold mb-1">Invoice Number</label><input type="text" id="dynInvNo" class="w-full border p-2.5 rounded-lg bg-white dark:bg-gray-800"></div>`;
+            else if (type === 'Other Expenses') div.innerHTML = `<div class="md:col-span-2"><label class="block text-sm font-bold mb-1">Custom Description</label><input type="text" id="dynExpDesc" class="w-full border p-2.5 rounded-lg bg-white dark:bg-gray-800"></div><div><label class="block text-sm font-bold mb-1">Cheque Number (If any)</label><input type="text" id="dynExpChq" class="w-full border p-2.5 rounded-lg bg-white dark:bg-gray-800"></div>`;
+            else if (type === 'OD Interest') div.innerHTML = `<div><label class="block text-sm font-bold mb-1">Month</label><input type="month" id="dynExpMonth" class="w-full border p-2.5 rounded-lg bg-white dark:bg-gray-800"></div><div><label class="block text-sm font-bold mb-1">Interest Rate %</label><input type="text" id="dynExpRate" class="w-full border p-2.5 rounded-lg bg-white dark:bg-gray-800"></div>`;
+            else div.innerHTML = `<div><label class="block text-sm font-bold mb-1">Month / Period</label><input type="month" id="dynExpMonth" class="w-full border p-2.5 rounded-lg bg-white dark:bg-gray-800"></div><div><label class="block text-sm font-bold mb-1">Notes</label><input type="text" id="dynExpNotes" class="w-full border p-2.5 rounded-lg bg-white dark:bg-gray-800"></div>`;
+        }
+
+        function previewTx(e) {
+            e.preventDefault();
+            let isInc = document.querySelector('input[name="txCategory"]:checked').value === 'Income';
+            let data = { id: document.getElementById('txEditId').value || Date.now().toString(), category: isInc?'Income':'Expense', accId: document.getElementById('txAccount').value, date: document.getElementById('txDate').value, timestamp: new Date().toISOString(), audits: [] };
+            if(document.getElementById('txEditId').value) { let ex = transactions.find(t=>t.id===data.id); if(ex&&ex.audits) data.audits = ex.audits; }
+            
+            if(isInc) {
+                data.type = document.getElementById('incType').value; data.amount = parseFloat(document.getElementById('incAmount').value);
+                if(data.type === 'Cash') { data.desc = document.getElementById('incMethod').value; data.notes = document.getElementById('incNotes1').value; } 
+                else { data.desc = document.getElementById('incChqMethod').value; data.route = document.getElementById('incRoute').value; data.chqNo = document.getElementById('incChqNo').value; data.chqDate = document.getElementById('incChqDate').value; data.realizeDate = document.getElementById('incSumDate').value; }
+            } else {
+                data.type = document.getElementById('expType').value; data.amount = parseFloat(document.getElementById('expAmount').value);
+                if(data.type === 'Stock Payment') data.desc = "Inv: " + document.getElementById('dynInvNo').value;
+                else if (data.type === 'Other Expenses') { data.desc = document.getElementById('dynExpDesc').value; data.chqNo = document.getElementById('dynExpChq').value; }
+                else if (data.type === 'OD Interest') data.desc = "Month: " + document.getElementById('dynExpMonth').value + " | Rate: " + document.getElementById('dynExpRate').value;
+                else { data.desc = "Month: " + document.getElementById('dynExpMonth').value; data.notes = document.getElementById('dynExpNotes').value; }
+            }
+            tempTxData = data;
+            let pHTML = `<div class="border-l-4 ${isInc?'border-green-500':'border-red-500'} pl-4 space-y-2"><p><b>Account:</b> ${accounts.find(a=>a.id===data.accId).bank}</p><p><b>Date:</b> ${data.date}</p><p><b>Type:</b> ${data.type}</p><p><b>Amount:</b> Rs. ${fmt(data.amount)}</p><p><b>Details:</b> ${data.desc||'-'}</p></div>`;
+            document.getElementById('previewContent').innerHTML = pHTML; document.getElementById('previewModal').classList.remove('hidden');
+        }
+
+        function confirmSaveTx() {
+            if(!tempTxData) return; saveState();
+            let idx = transactions.findIndex(t => t.id === tempTxData.id);
+            if(idx >= 0) transactions[idx] = tempTxData; else transactions.push(tempTxData);
+            saveData(); document.getElementById('previewModal').classList.add('hidden'); resetTxForm(); refreshAll(); showToast('Saved Successfully!');
+        }
+
+        function resetTxForm() {
+            document.getElementById('txEditId').value = ''; document.getElementById('txForm').reset();
+            document.getElementById('txDate').valueAsDate = new Date(); document.getElementById('editBadge').classList.add('hidden');
+            document.getElementById('txFormTitle').innerText = 'New Transaction'; toggleTxForm();
+        }
+
+        // ================= SMART EXCEL IMPORT LOGIC =================
+        function handleSmartExcelImport(e) {
+            let file = e.target.files[0]; if(!file) return; saveState();
+            let reader = new FileReader();
+            reader.onload = function(evt) {
+                let data = new Uint8Array(evt.target.result); let workbook = XLSX.read(data, {type: 'array'});
+                let sheet = workbook.Sheets[workbook.SheetNames[0]]; let excelData = XLSX.utils.sheet_to_json(sheet, {raw: false});
+                if(excelData.length === 0) { showToast("Excel file is empty", true); return; }
+                pendingImports = excelData; currentImportIdx = 0; document.getElementById('smartExcelUploadFile').value = ''; processNextImport();
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function processNextImport() {
+            if (currentImportIdx >= pendingImports.length) {
+                document.getElementById('smartImportModal').classList.add('hidden'); showToast(`Excel Import Completed! Processed ${pendingImports.length} rows.`); saveData(); refreshAll(); return;
+            }
+            let rowRaw = pendingImports[currentImportIdx]; let row = {}; Object.keys(rowRaw).forEach(k => { row[k.toLowerCase().trim()] = rowRaw[k]; });
+            document.getElementById('importProgressTxt').innerText = `Reviewing Row ${currentImportIdx + 1} of ${pendingImports.length}`;
+            document.getElementById('importForm').reset();
+            let accNoRaw = row['account no'] || row['acc no'] || row['account number'] || row['account'] || row['bank account'] || '';
+            let accNoStr = accNoRaw.toString().trim(); let accObj = accounts.find(a => a.number.toString().trim() === accNoStr);
+            if (accObj) document.getElementById('impAccount').value = accObj.id; else document.getElementById('impAccount').value = '';
+            let tDate = row['date'] || row['transaction date'] || '';
+            if(tDate) { let d = new Date(tDate); if(!isNaN(d)) document.getElementById('impDate').value = toLocalISODate(d); } else { document.getElementById('impDate').valueAsDate = new Date(); }
+
+            let catStr = (row['category'] || row['income/expense'] || row['income / expense'] || row['type'] || '').toString().toLowerCase();
+            let expCatRaw = row['expense category'] || row['exp category'] || row['expense type'] || '';
+            let isInc = true;
+            if (catStr.includes('exp') || expCatRaw !== '') { isInc = false; document.querySelector('input[name="impCategory"][value="Expense"]').checked = true; } else { document.querySelector('input[name="impCategory"][value="Income"]').checked = true; }
+
+            let rawAmt = row['amount'] || row['value'] || row['rs'] || 0;
+            if (typeof rawAmt === 'string') rawAmt = rawAmt.replace(/,/g, '').replace(/rs/ig, '').trim();
+            let amt = parseFloat(rawAmt) || 0; let invNoRaw = row['invoice number'] || row['invoice no'] || row['inv no'] || row['invoice'] || row['inv'] || ''; let invNoStr = invNoRaw.toString().trim();
+
+            if (isInc) {
+                document.getElementById('impIncAmount').value = amt || ''; let method = (row['payment method'] || row['method'] || '').toString().toLowerCase();
+                if (method.includes('cheque') || method.includes('chq')) {
+                    document.getElementById('impIncType').value = 'Cheque'; document.getElementById('impIncChqMethod').value = row['cheque issuer (shop name)'] || row['issuer'] || ''; document.getElementById('impIncRoute').value = row['route (street)'] || row['route'] || ''; document.getElementById('impIncChqNo').value = row['cheque number'] || row['cheque no'] || '';
+                    let rd = row['realize date (on cheque)'] || row['realize date'] || ''; if(rd) { let d=new Date(rd); if(!isNaN(d)) document.getElementById('impIncSumDate').value = toLocalISODate(d); }
+                    let bd = row['bank date (cleared date)'] || row['bank date'] || ''; if(bd) { let d=new Date(bd); if(!isNaN(d)) document.getElementById('impIncChqDate').value = toLocalISODate(d); }
+                } else {
+                    document.getElementById('impIncType').value = 'Cash'; document.getElementById('impIncMethod').value = row['route (street)'] || row['route'] || row['cheque issuer (shop name)'] || row['description'] || '';
+                }
+            } else {
+                document.getElementById('impExpAmount').value = amt || ''; let expCatStr = expCatRaw.toString().trim().toLowerCase();
+                if (invNoStr) { document.getElementById('impExpType').value = 'Stock Payment'; } else if (expCatStr) {
+                    let mappedType = 'Other Expenses';
+                    if (expCatStr.includes('stock')) mappedType = 'Stock Payment'; else if (expCatStr.includes('bank') || expCatStr.includes('charge')) mappedType = 'Bank Charge'; else if (expCatStr.includes('od') || expCatStr.includes('interest')) mappedType = 'OD Interest'; else if (expCatStr.includes('util') || expCatStr.includes('water') || expCatStr.includes('electric')) mappedType = 'Utilities'; else if (expCatStr.includes('salar') || expCatStr.includes('wage')) mappedType = 'Salary';
+                    else { let sel = document.getElementById('impExpType'); for(let i=0; i<sel.options.length; i++) { if(sel.options[i].value.toLowerCase() === expCatStr || sel.options[i].value.toLowerCase().includes(expCatStr)) { mappedType = sel.options[i].value; break; } } }
+                    document.getElementById('impExpType').value = mappedType;
+                }
+            }
+            toggleImportForm();
+            if (!isInc) {
+                let currentExpType = document.getElementById('impExpType').value;
+                if (currentExpType === 'Stock Payment') { let invField = document.getElementById('impDynInvNo'); if(invField) invField.value = invNoStr; }
+                else if (currentExpType === 'Salary') {
+                    let monthField = document.getElementById('impDynExpMonth'); let notesField = document.getElementById('impDynExpNotes');
+                    let monthVal = row['month / period'] || row['month'] || row['period'] || ''; let notesVal = row['notes'] || row['note'] || row['description'] || '';
+                    if(monthField && monthVal) { monthField.value = monthVal.toString().trim(); } if(notesField && notesVal) { notesField.value = notesVal.toString().trim(); }
+                }
+            }
+            document.getElementById('smartImportModal').classList.remove('hidden');
+        }
+
+        function toggleImportForm() {
+            let isInc = document.querySelector('input[name="impCategory"]:checked').value === 'Income';
+            document.getElementById('impIncomeArea').style.display = isInc ? 'block' : 'none'; document.getElementById('impExpenseArea').style.display = !isInc ? 'block' : 'none';
+            document.getElementById('impIncAmount').required = isInc; document.getElementById('impExpAmount').required = !isInc;
+            if(isInc) {
+                let type = document.getElementById('impIncType').value; document.getElementById('impIncCashDetails').style.display = type === 'Cash' ? 'grid' : 'none'; document.getElementById('impIncChequeDetails').style.display = type === 'Cheque' ? 'grid' : 'none'; document.getElementById('impExpDynamicArea').innerHTML = '';
+            } else {
+                let type = document.getElementById('impExpType').value; let div = document.getElementById('impExpDynamicArea'); div.innerHTML = '';
+                if(type === 'Stock Payment') div.innerHTML = `<div><label class="block text-sm font-bold mb-1">Invoice Number</label><input type="text" id="impDynInvNo" class="w-full border p-2 rounded bg-white dark:bg-gray-700"></div>`;
+                else if (type === 'Other Expenses') div.innerHTML = `<div class="col-span-2"><label class="block text-sm font-bold mb-1">Custom Description</label><input type="text" id="impDynExpDesc" class="w-full border p-2 rounded bg-white dark:bg-gray-700"></div><div><label class="block text-sm font-bold mb-1">Cheque Number (If any)</label><input type="text" id="impDynExpChq" class="w-full border p-2 rounded bg-white dark:bg-gray-700"></div>`;
+                else if (type === 'OD Interest') div.innerHTML = `<div><label class="block text-sm font-bold mb-1">Month</label><input type="month" id="impDynExpMonth" class="w-full border p-2 rounded bg-white dark:bg-gray-700"></div><div><label class="block text-sm font-bold mb-1">Interest Rate %</label><input type="text" id="impDynExpRate" class="w-full border p-2 rounded bg-white dark:bg-gray-700"></div>`;
+                else div.innerHTML = `<div><label class="block text-sm font-bold mb-1">Month / Period</label><input type="month" id="impDynExpMonth" class="w-full border p-2 rounded bg-white dark:bg-gray-700"></div><div><label class="block text-sm font-bold mb-1">Notes</label><input type="text" id="impDynExpNotes" class="w-full border p-2 rounded bg-white dark:bg-gray-700"></div>`;
+            }
+        }
+
+        function saveImportRow(e) {
+            e.preventDefault();
+            let isInc = document.querySelector('input[name="impCategory"]:checked').value === 'Income';
+            let data = { id: Date.now().toString() + Math.floor(Math.random()*1000), category: isInc ? 'Income' : 'Expense', accId: document.getElementById('impAccount').value, date: document.getElementById('impDate').value, timestamp: new Date().toISOString(), audits: [] };
+            if(isInc) {
+                data.type = document.getElementById('impIncType').value; data.amount = parseFloat(document.getElementById('impIncAmount').value);
+                if(data.type === 'Cash') { data.desc = document.getElementById('impIncMethod').value; data.notes = document.getElementById('impIncNotes').value; } else {
+                    data.desc = document.getElementById('impIncChqMethod').value; data.route = document.getElementById('impIncRoute').value; data.chqNo = document.getElementById('impIncChqNo').value; data.chqDate = document.getElementById('impIncChqDate').value; data.realizeDate = document.getElementById('impIncSumDate').value;
+                }
+            } else {
+                data.type = document.getElementById('impExpType').value; data.amount = parseFloat(document.getElementById('impExpAmount').value);
+                if(data.type === 'Stock Payment') data.desc = "Inv: " + (document.getElementById('impDynInvNo') ? document.getElementById('impDynInvNo').value : '');
+                else if (data.type === 'Other Expenses') { data.desc = document.getElementById('impDynExpDesc') ? document.getElementById('impDynExpDesc').value : ''; data.chqNo = document.getElementById('impDynExpChq') ? document.getElementById('impDynExpChq').value : ''; }
+                else if (data.type === 'OD Interest') data.desc = "Month: " + (document.getElementById('impDynExpMonth') ? document.getElementById('impDynExpMonth').value : '') + " | Rate: " + (document.getElementById('impDynExpRate') ? document.getElementById('impDynExpRate').value : '');
+                else { data.desc = "Month: " + (document.getElementById('impDynExpMonth') ? document.getElementById('impDynExpMonth').value : ''); data.notes = document.getElementById('impDynExpNotes') ? document.getElementById('impDynExpNotes').value : ''; }
+            }
+            transactions.push(data); showToast('Row Saved!'); currentImportIdx++; processNextImport();
+        }
+
+        function skipImportRow() { currentImportIdx++; processNextImport(); }
+        function cancelSmartImport() { if(confirm("Are you sure you want to cancel the rest of the import? (Saved rows are kept)")) { pendingImports = []; document.getElementById('smartImportModal').classList.add('hidden'); saveData(); refreshAll(); } }
+
+        function editTx(id) {
+            let tx = transactions.find(t => t.id === id); if(!tx) return;
+            openTab('transactions'); document.getElementById('txEditId').value = tx.id;
+            document.getElementById('editBadge').classList.remove('hidden'); document.getElementById('txFormTitle').innerText = 'Edit Transaction';
+            document.querySelector(`input[name="txCategory"][value="${tx.category}"]`).checked = true; toggleTxForm();
+            document.getElementById('txAccount').value = tx.accId; document.getElementById('txDate').value = tx.date;
+            if(tx.category === 'Income') {
+                document.getElementById('incType').value = tx.type; toggleIncomeType(); document.getElementById('incAmount').value = tx.amount;
+                if(tx.type === 'Cash') { document.getElementById('incMethod').value = tx.desc || ''; document.getElementById('incNotes1').value = tx.notes || ''; } 
+                else { document.getElementById('incChqMethod').value = tx.desc || ''; document.getElementById('incRoute').value = tx.route || ''; document.getElementById('incChqNo').value = tx.chqNo || ''; document.getElementById('incChqDate').value = tx.chqDate || ''; document.getElementById('incSumDate').value = tx.realizeDate || ''; }
+            } else {
+                document.getElementById('expType').value = tx.type; toggleExpenseType(); document.getElementById('expAmount').value = tx.amount;
+                if(tx.type === 'Stock Payment') document.getElementById('dynInvNo').value = (tx.desc||'').replace('Inv: ', '');
+                else if (tx.type === 'Other Expenses') { document.getElementById('dynExpDesc').value = tx.desc || ''; document.getElementById('dynExpChq').value = tx.chqNo || '';}
+            }
+        }
+        
+        function duplicateTx(id) { editTx(id); document.getElementById('txEditId').value = ''; document.getElementById('editBadge').classList.add('hidden'); document.getElementById('txFormTitle').innerText = 'Duplicate Transaction (Unsaved)'; document.getElementById('txDate').valueAsDate = new Date(); showToast('Ready to duplicate. Make changes and Save.', false); }
+        function deleteTx(id) { if(confirm('Move to Recycle Bin?')) { saveState(); deletedTxs.push(transactions.find(t => t.id === id)); transactions = transactions.filter(t => t.id !== id); saveData(); refreshAll(); showToast('Moved to Recycle Bin.', true); } }
+        
+        function printTx(id) {
+            let tx = transactions.find(t => t.id === id); let accName = accounts.find(a=>a.id===tx.accId)?.bank || 'N/A';
+            let html = `<html><head><title>Receipt</title><style>body{font-family:sans-serif; padding:40px; text-align:center;} .box{border:1px solid #ccc; padding:30px; max-width:400px; margin:auto; border-radius:10px;} h2{color:#1e3a8a; margin-bottom:5px;} p{margin:8px 0; font-size:14px; text-align:left;}</style></head><body><div class="box"><h2>GEETHARA ENTERPRISES</h2><p style="text-align:center;color:#666; font-size:12px;">Smart Finance OS</p><hr style="margin:20px 0;"/><p><b>Date:</b> ${tx.date}</p><p><b>Account:</b> ${accName}</p><p><b>Category:</b> ${tx.category}</p><p><b>Type:</b> ${tx.type}</p>${tx.desc ? `<p><b>Details:</b> ${tx.desc}</p>` : ''}${tx.route ? `<p><b>Route:</b> ${tx.route}</p>` : ''}${tx.chqNo ? `<p><b>Cheque No:</b> ${tx.chqNo}</p>` : ''}<hr style="margin:20px 0;"/><h3 style="text-align:right;"><b>Amount:</b> Rs. ${fmt(tx.amount)}</h3></div><script>window.print(); window.onafterprint = window.close;</`+`script></body></html>`;
+            window.open('', '', 'width=600,height=600').document.write(html);
+        }
+
+        function setQuickFilter(type) {
+            let today = new Date(); let from = document.getElementById('filterFrom'); let to = document.getElementById('filterTo'); to.valueAsDate = today;
+            if(type === 'today') from.valueAsDate = today;
+            else if(type === 'week') { let d = new Date(); d.setDate(d.getDate()-7); from.valueAsDate = d; }
+            else if(type === 'month') { let d = new Date(today.getFullYear(), today.getMonth(), 1); from.valueAsDate = d; }
+            else { from.value = ''; to.value = ''; document.getElementById('searchBar').value=''; document.getElementById('filterAcc').value='All'; document.getElementById('filterCat').value='All';}
+            applyFilter();
+        }
+
+        function markAudit(id, levelClicked) {
+            let tx = transactions.find(t => t.id === id); if(!tx) return; saveState();
+            if(!tx.audits) tx.audits = [];
+            if(levelClicked === tx.audits.length + 1) { tx.audits.push(new Date().toLocaleString()); showToast(`Audit Level ${levelClicked} marked.`); } 
+            else if (levelClicked <= tx.audits.length) { tx.audits = tx.audits.slice(0, levelClicked - 1); showToast(`Audit rolled back to Level ${levelClicked - 1}.`); }
+            saveData(); applyFilter();
+        }
+
+        function debouncedApplyFilter() { clearTimeout(searchTimeout); searchTimeout = setTimeout(applyFilter, 250); }
+
+        function applyFilter() {
+            let q = document.getElementById('searchBar').value.toLowerCase(); let acc = document.getElementById('filterAcc').value; let cat = document.getElementById('filterCat').value; let fFrom = document.getElementById('filterFrom').value; let fTo = document.getElementById('filterTo').value;
+            let tempBalances = {}; accounts.forEach(a => tempBalances[a.id] = a.balance || 0);
+            let allSortedTxs = [...transactions].sort((a, b) => { let dateDiff = new Date(a.date) - new Date(b.date); if (dateDiff !== 0) return dateDiff; return new Date(a.timestamp || 0) - new Date(b.timestamp || 0); });
+            
+            allSortedTxs.forEach(tx => {
+                if (!tx.isReturned) { if (tx.category === 'Income') tempBalances[tx.accId] += tx.amount; else tempBalances[tx.accId] -= tx.amount; }
+                tx.runningBalance = tempBalances[tx.accId];
+            });
+
+            let filtered = allSortedTxs;
+            if(acc !== 'All') filtered = filtered.filter(t => t.accId === acc); if(cat !== 'All') filtered = filtered.filter(t => t.category === cat);
+            if(fFrom) filtered = filtered.filter(t => new Date(t.date) >= new Date(fFrom)); if(fTo) filtered = filtered.filter(t => new Date(t.date) <= new Date(fTo));
+            if(q) filtered = filtered.filter(t => (t.desc||'').toLowerCase().includes(q) || (t.route||'').toLowerCase().includes(q) || (t.chqNo||'').toLowerCase().includes(q) || t.type.toLowerCase().includes(q));
+            
+            filtered.sort((a,b) => { let dateDiff = new Date(b.date) - new Date(a.date); if (dateDiff !== 0) return dateDiff; return new Date(b.timestamp || 0) - new Date(a.timestamp || 0); });
+            
+            // Set global variable for Cheque Excel Export feature
+            currentFilteredTxs = filtered;
+            
+            const tbody = document.getElementById('masterTableBody'); let totInc = 0, totExp = 0; let htmlStr = '';
+            filtered.forEach(tx => {
+                let accName = accounts.find(a => a.id === tx.accId)?.bank || 'Deleted Acc'; let details = tx.desc || '';
+                if(tx.route) details += ` <span class="text-blue-500">| [${tx.route}]</span>`; if(tx.chqNo) details += ` | Chq: ${tx.chqNo}`; if(tx.realizeDate) details += ` | OnCheqDt: ${tx.realizeDate}`;
+                if(tx.isReturned) details += ` <br><span class="bg-red-100 text-red-800 px-1.5 py-0.5 rounded text-[10px] font-bold border border-red-200">Returned: ${tx.returnReason||'No reason'}</span>`;
+
+                let isInc = tx.category === 'Income'; 
+                if(!tx.isReturned) { if(isInc) totInc += tx.amount; else totExp += tx.amount; }
+                let catBadge = isInc ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800';
+
+                let audits = tx.audits || []; let auditHTML = '<div class="flex justify-center space-x-1.5">';
+                for(let i=1; i<=5; i++) { let isChecked = i <= audits.length; let colorClass = isChecked ? 'text-green-500 hover:text-red-500' : 'text-gray-300 hover:text-green-400'; auditHTML += `<div class="audit-tooltip"><i class="fa-solid fa-square-check ${colorClass} cursor-pointer text-lg transition" onclick="markAudit('${tx.id}', ${i})"></i><span class="tooltiptext whitespace-nowrap">${isChecked ? `Audited on: ${audits[i-1]}` : `Click to verify level ${i}`}</span></div>`; } auditHTML += '</div>';
+                let returnBtn = (isInc && tx.type === 'Cheque' && !tx.isReturned) ? `<button onclick="openReturnModal('${tx.id}')" title="Mark as Returned" class="text-orange-500 hover:text-orange-700 bg-orange-50 p-1.5 rounded"><i class="fa-solid fa-rotate-left"></i></button>` : '';
+                let incAmtStr = tx.isReturned ? `<span class="line-through text-gray-400 text-sm">${fmt(tx.amount)}</span>` : fmt(tx.amount);
+                let runBalStr = `<br><span class="text-[11px] text-red-500 font-bold block mt-1 tracking-tight">Bal: ${fmt(tx.runningBalance)}</span>`;
+                let incDisplay = isInc ? incAmtStr + runBalStr : '-'; let expDisplay = !isInc ? fmt(tx.amount) + runBalStr : '-';
+                
+                htmlStr += `<tr class="hover:bg-gray-50 dark:hover:bg-gray-800 transition border-b border-gray-100 dark:border-gray-800"><td class="py-3 px-4 font-medium">${tx.date}</td><td class="py-3 px-4 font-bold">${accName}</td><td class="py-3 px-4 text-center"><span class="${catBadge} text-xs px-2 py-1 rounded-md font-bold">${tx.category}</span></td><td class="py-3 px-4 text-xs font-bold text-gray-600 dark:text-gray-400">${tx.type}</td><td class="py-3 px-4 text-xs">${details}</td><td class="py-3 px-4 text-center print:hidden">${auditHTML}</td><td class="py-3 px-4 text-right font-black text-green-600">${incDisplay}</td><td class="py-3 px-4 text-right font-black text-red-600">${expDisplay}</td><td class="py-3 px-4 text-center print:hidden flex justify-center space-x-2">${returnBtn}<button onclick="printTx('${tx.id}')" class="text-gray-500 hover:text-gray-700 bg-gray-100 p-1.5 rounded"><i class="fa-solid fa-print"></i></button><button onclick="duplicateTx('${tx.id}')" class="text-purple-500 hover:text-purple-700 bg-purple-50 p-1.5 rounded"><i class="fa-solid fa-copy"></i></button><button onclick="editTx('${tx.id}')" class="text-blue-500 hover:text-blue-700 bg-blue-50 p-1.5 rounded"><i class="fa-solid fa-pen-to-square"></i></button><button onclick="deleteTx('${tx.id}')" class="text-red-500 hover:text-red-700 bg-red-50 p-1.5 rounded"><i class="fa-solid fa-trash"></i></button></td></tr>`;
+            });
+            tbody.innerHTML = htmlStr;
+            document.getElementById('fltInc').innerText = `Rs. ${fmt(totInc)}`; document.getElementById('fltExp').innerText = `Rs. ${fmt(totExp)}`; document.getElementById('fltBal').innerText = `Rs. ${fmt(totInc - totExp)}`;
+        }
+
+        function updateDashboard() {
+            let totalBal = accounts.reduce((sum, a) => sum + getAccBalance(a.id), 0);
+            let currMonth = new Date().getMonth(); let currYear = new Date().getFullYear(); let todayStr = toLocalISODate(new Date());
+            let mInc = 0, mExp = 0, tInc = 0, tExp = 0;
+            transactions.forEach(t => { 
+                if(t.isReturned) return;
+                let d = new Date(t.date); 
+                if(d.getMonth() === currMonth && d.getFullYear() === currYear) { if(t.category === 'Income') mInc += t.amount; else mExp += t.amount; } 
+                if(t.date === todayStr) { if(t.category === 'Income') tInc += t.amount; else tExp += t.amount; } 
+            });
+            document.getElementById('dashTotalBalance').innerText = `Rs. ${fmt(totalBal)}`; document.getElementById('dashIncome').innerText = `Rs. ${fmt(mInc)}`; document.getElementById('dashExpense').innerText = `Rs. ${fmt(mExp)}`; document.getElementById('dashTodayInc').innerText = `Rs. ${fmt(tInc)}`; document.getElementById('dashTodayExp').innerText = `Rs. ${fmt(tExp)}`;
+            let hBadge = document.getElementById('budgetHealth'); hBadge.innerText = `Budget Health: ${mInc > 0 ? ((mExp/mInc)*100).toFixed(0) + "% Expended" : "No Income"}`;
+            hBadge.className = mExp > mInc ? "text-sm font-bold bg-red-100 text-red-800 px-3 py-1 rounded-full shadow-sm" : "text-sm font-bold bg-green-100 text-green-800 px-3 py-1 rounded-full shadow-sm";
+            
+            let pBody = document.getElementById('pendingChequesBody'); 
+            let pendingTxs = transactions.filter(t => t.category === 'Income' && t.type === 'Cheque' && !t.isReturned);
+            let pendingSum = 0; let activePending = 0; let htmlStr = '';
+            pendingTxs.sort((a,b)=>new Date(a.chqDate)-new Date(b.chqDate)).forEach(t => {
+                if(t.chqDate && new Date(t.chqDate) >= new Date(new Date().setHours(0,0,0,0))) {
+                    activePending++; pendingSum += t.amount;
+                    htmlStr += `<tr class="border-b hover:bg-gray-50"><td class="py-3 px-4 text-xs">${t.chqDate||'-'}</td><td class="py-3 px-4 text-xs text-orange-600 font-bold">${t.realizeDate} <span class="bg-orange-100 text-orange-800 px-1 rounded">Pending</span></td><td class="py-3 px-4 text-xs font-mono font-bold">${t.chqNo}</td><td class="py-3 px-4 text-sm font-black text-right">Rs. ${fmt(t.amount)}</td></tr>`;
+                }
+            });
+            if(activePending === 0) { pBody.innerHTML = '<tr><td colspan="4" class="text-xs text-center p-4">No pending cheques.</td></tr>'; } 
+            else { pBody.innerHTML = htmlStr; }
+
+            document.getElementById('dashPendingVal').innerText = `Rs. ${fmt(pendingSum)}`; 
+            if(financeChartObj) { initChart(); initPieChart(); }
+        }
+
+        function initChart() {
+            let ctx = document.getElementById('financeChart'); if(!ctx) return;
+            let months = [], incData = [], expData = [];
+            for(let i=5; i>=0; i--) { 
+                let d = new Date(); d.setMonth(d.getMonth() - i); months.push(d.toLocaleString('en-US', { month: 'short' }));
+                let iSum = 0, eSum = 0;
+                transactions.forEach(t => { 
+                    if(t.isReturned) return;
+                    let td = new Date(t.date); 
+                    if(td.getMonth() === d.getMonth() && td.getFullYear() === d.getFullYear()) { if(t.category==='Income') iSum+=t.amount; else eSum+=t.amount; } 
+                });
+                incData.push(iSum); expData.push(eSum); 
+            }
+            if(financeChartObj) financeChartObj.destroy();
+            financeChartObj = new Chart(ctx, { type: 'bar', data: { labels: months, datasets: [{ label: 'Income', data: incData, backgroundColor: '#22c55e', borderRadius: 4 }, { label: 'Expense', data: expData, backgroundColor: '#ef4444', borderRadius: 4 }] }, options: { responsive: true, maintainAspectRatio: false } });
+        }
+        
+        function initPieChart() {
+            let ctx = document.getElementById('pieChart'); if(!ctx) return;
+            let expCats = {}; transactions.filter(t=>t.category==='Expense' && !t.isReturned).forEach(t=>{ expCats[t.type] = (expCats[t.type] || 0) + t.amount; });
+            if(pieChartObj) pieChartObj.destroy();
+            pieChartObj = new Chart(ctx, { type: 'doughnut', data: { labels: Object.keys(expCats), datasets: [{ data: Object.values(expCats), backgroundColor: ['#ef4444', '#f97316', '#eab308', '#3b82f6', '#8b5cf6', '#ec4899'] }] }, options: { responsive: true, maintainAspectRatio: false, cutout: '65%' } });
+        }
+
+        // ====== NEW CHEQUES EXPORT FEATURE ======
+        function exportChequesToExcel() {
+            let chqData = currentFilteredTxs.filter(t => t.category === 'Income' && t.type === 'Cheque');
+            if(chqData.length === 0) return showToast('No Cheques found in current filter!', true);
+
+            let exportArr = chqData.map(t => ({
+                "දිනය (Date)": t.date,
+                "OnCheqDt (Realize Date)": t.realizeDate || '-',
+                "චෙක් අංකය (Cheque No)": t.chqNo || '-',
+                "Income (Rs)": t.amount
+            }));
+
+            let ws = XLSX.utils.json_to_sheet(exportArr);
+            let wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Cheques");
+            XLSX.writeFile(wb, "GEETHARA_Filtered_Cheques.xlsx");
+            showToast('Cheques Excel Downloaded!');
+        }
+
+        function exportToCSV() {
+            let csv = 'Date,Account,Category,Type,Description/Issuer,Route,Amount\n';
+            transactions.forEach(tx => csv += `${tx.date},${accounts.find(a => a.id === tx.accId)?.bank || 'Deleted'},${tx.category}${tx.isReturned ? ' (Returned)' : ''},${tx.type},${(tx.desc||'').replace(/,/g, '')},${(tx.route||'').replace(/,/g, '')},${tx.amount}\n`);
+            let a = document.createElement('a'); a.href = window.URL.createObjectURL(new Blob([csv], { type: 'text/csv' })); a.download = 'GEETHARA_Data.csv'; a.click(); showToast('CSV downloaded!');
+        }
+        
+        function exportToExcel() { XLSX.writeFile(XLSX.utils.table_to_book(document.getElementById('masterTableExport'), {sheet:"Transactions"}), "GEETHARA_Transactions.xlsx"); showToast('Excel downloaded!'); }
+        
+        function exportToPDF() {
+            const { jsPDF } = window.jspdf; const doc = new jsPDF('landscape');
+            doc.setFillColor(15, 23, 42); doc.rect(0, 0, doc.internal.pageSize.width, 25, 'F'); doc.setTextColor(255, 255, 255); doc.setFontSize(20);
+            doc.text('GEETHARA ENTERPRISES', 14, 13); doc.setFontSize(10); doc.text('Smart Finance OS - Master Transaction Report', 14, 20);
+            doc.text(`Generated on: ${new Date().toLocaleString()}`, doc.internal.pageSize.width - 70, 20);
+            doc.autoTable({ html: '#masterTableExport', startY: 32, theme: 'striped', styles: { fontSize: 8 }, headStyles: { fillColor: [30, 58, 138] }, columns: [{header: 'Date'}, {header: 'Account'}, {header: 'Category'}, {header: 'Type'}, {header: 'Description'}, {header: 'Inc'}, {header: 'Exp'}] });
+            doc.save('GEETHARA_Report.pdf'); showToast('PDF Report downloaded!');
+        }
+
+        function renderRecycleBin() {
+            let list = document.getElementById('recycleBinList'); let htmlStr = '';
+            if(deletedTxs.length === 0) { htmlStr = '<p class="text-gray-500 font-medium text-center py-6">Recycle bin is empty.</p>'; } 
+            else { deletedTxs.forEach(t => { htmlStr += `<li class="flex justify-between items-center bg-white p-3 border rounded-lg mb-2"><span class="font-bold text-gray-700">${t.date} | ${t.category} | Rs. ${fmt(t.amount)}</span><button onclick="restoreTx('${t.id}')" class="bg-green-100 text-green-700 px-3 py-1 rounded font-bold hover:bg-green-200">Restore</button></li>`; }); }
+            list.innerHTML = htmlStr;
+        }
+        
+        function restoreTx(id) { saveState(); transactions.push(deletedTxs.find(t => t.id === id)); deletedTxs = deletedTxs.filter(t => t.id !== id); saveData(); refreshAll(); showToast('Restored successfully.'); }
+        function backupData() { let a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify({ accs: accounts, txs: transactions })], {type: "application/json"})); a.download = `GEETHARA_Backup_${new Date().toISOString().slice(0,10)}.json`; a.click(); showToast('Backup File Downloaded.'); }
+        
+        function restoreData() {
+            let file = document.getElementById('restoreFile').files[0]; if(!file) return showToast('Select Backup File!', true); if(!confirm('Overwrite current data?')) return;
+            saveState(); let reader = new FileReader();
+            reader.onload = function(e) { try { let data = JSON.parse(e.target.result); accounts = data.accs || []; transactions = data.txs || []; saveData(); refreshAll(); showToast('Data Restored!'); document.getElementById('restoreFile').value = ''; } catch(err) { showToast('Invalid File!', true); } }; reader.readAsText(file);
+        }
+
+        function fixExistingDates() {
+            if(!confirm('මෙමගින් අතීතයේ දෝෂයක් නිසා පසුපසට ගිය සියලුම දත්ත සඳහා දින 1ක් එකතු වේ. ඔබ මෙය සිදු කිරීමට එකඟද?')) return;
+            saveState(); let count = 0;
+            transactions.forEach(t => {
+                let d = new Date(t.date); d.setDate(d.getDate() + 1); t.date = toLocalISODate(d);
+                if(t.chqDate) { let cd = new Date(t.chqDate); cd.setDate(cd.getDate() + 1); t.chqDate = toLocalISODate(cd); }
+                if(t.realizeDate) { let rd = new Date(t.realizeDate); rd.setDate(rd.getDate() + 1); t.realizeDate = toLocalISODate(rd); } count++;
+            });
+            saveData(); refreshAll(); showToast(`Fixed Dates for ${count} Transactions!`);
+        }
+        
+        function hardResetSystem() { 
+            if(prompt('Type "DELETE" to wipe all data:') === 'DELETE') { 
+                saveState(); accounts = []; transactions = []; deletedTxs = []; saveData(); refreshAll(); showToast('System wiped clean.', true);
+            } 
+        }
+    </script>
+</body>
+</html>
